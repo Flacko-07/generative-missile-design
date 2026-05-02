@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Export the conditional Generator weights from gen.pth into a pure NumPy .npz archive.
-The Vercel API uses these weights directly – no torch needed.
+Export Generator weights from gen.pth → gen_weights.npz
+with keys that match api/design.py: W0, b0, W1, b1, W2, b2.
 """
 import numpy as np
 import torch
 import torch.nn as nn
 
-NOISE_DIM = 50        # must match the Generator definition
+NOISE_DIM = 50
 COND_DIM = 5
 OUT_DIM = 10
 
@@ -24,22 +24,16 @@ class Generator(nn.Module):
     def forward(self, noise, cond):
         return self.net(torch.cat([noise, cond], dim=1))
 
-# Load the trained model
-device = torch.device("cpu")
 gen = Generator()
-gen.load_state_dict(torch.load("gen.pth", map_location=device, weights_only=False))
+gen.load_state_dict(torch.load("gen.pth", map_location="cpu", weights_only=False))
 gen.eval()
 
-# Extract weights & biases for each Linear layer
+# Extract only Linear layers – they are at indices 0, 2, 4
+linear_layers = [m for m in gen.net if isinstance(m, nn.Linear)]
 weights = {}
-for idx, module in enumerate(gen.net):
-    if isinstance(module, nn.Linear):
-        w = module.weight.detach().cpu().numpy()
-        b = module.bias.detach().cpu().numpy()
-        weights[f"layer_{idx}_weight"] = w
-        weights[f"layer_{idx}_bias"] = b
+for i, layer in enumerate(linear_layers):
+    weights[f"W{i}"] = layer.weight.detach().cpu().numpy()
+    weights[f"b{i}"] = layer.bias.detach().cpu().numpy()
 
-# Save to a lightweight archive
 np.savez_compressed("gen_weights.npz", **weights)
-print(f"Exported gen_weights.npz successfully.")
-print(f"File size: {np.round(np.savez_compressed('gen_weights.npz', **{}).__sizeof__() / 1024, 2)} KB")  # quick size check
+print("Exported gen_weights.npz with keys:", list(weights.keys()))
