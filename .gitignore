@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+
+# Trained models (large / binary)
+*.pth
+
+# OpenFOAM cases and generated meshes / results
+cases/
+stl_variants/
+
+# Logs
+joblog.txt
+*.log
+
+# Temporary / failed state files
+next_designs.json
+next_params.csv
+validation_results.csv
+generative_dataset.csv
+combined_dataset.csv
+synthetic_dataset.csv
+
+# Keep only the clean dataset as example
+# Uncomment the next line if you want to exclude all CSVs except clean_dataset.csv
+# *.csv
+# !clean_dataset.csv
+
+# Specific deprecated / temporary scripts
+failed_delete.py
+fix.py
+case_builders.py
+2case_builds.py
+parametric_sweep_old.py
+gan_after_openfoam.py
+validate_geometry.py
+validate_sweep.py
+
+# OpenFOAM misc
+badFaces
+illegalFaces
+problemFaces
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,5 @@
+case_name,stl_file,mach,aoa_deg,length,diameter
+missile_M1.0_A3,missile.stl,1.0,3.0,6.25,0.52
+tomahawk_M0.8_A3,tomahawk.stl,0.8,3.0,6.25,0.52
+brahmos_M2.8_A3,brahmos.stl,2.8,3.0,8.0,0.34
+hypersonic_M6.0_A3,hypersonic.stl,6.0,3.0,1.8,0.25
