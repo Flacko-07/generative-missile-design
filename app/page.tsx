@@ -2,138 +2,228 @@
 
 import { useState } from "react";
 
+const PARAM_META: Record<string, { unit: string; min: number; max: number; description: string }> = {
+  nose_length:     { unit: "m",  min: 0.2,   max: 2.5,  description: "Length of nose cone" },
+  body_diameter:   { unit: "m",  min: 0.15,  max: 0.6,  description: "Body outer diameter" },
+  body_length:     { unit: "m",  min: 0.8,   max: 7.0,  description: "Total body length" },
+  fin_span:        { unit: "m",  min: 0.0,   max: 1.2,  description: "Fin full span" },
+  fin_chord:       { unit: "m",  min: 0.0,   max: 0.8,  description: "Fin root chord" },
+  fin_thickness:   { unit: "m",  min: 0.0,   max: 0.08, description: "Fin thickness" },
+  fin_sweep_deg:   { unit: "°",  min: -45,   max: 45,   description: "Fin sweep angle" },
+  fin_offset:      { unit: "m",  min: -0.2,  max: 0.5,  description: "Fin axial offset" },
+  flare_angle_deg: { unit: "°",  min: 0.0,   max: 15,   description: "Boattail/flare angle" },
+  flare_length:    { unit: "m",  min: 0.0,   max: 0.5,  description: "Flare section length" },
+};
+
+type DesignResult = {
+  inputs: { Cd: number; Cl: number; Cm: number; Mach: number; AoA: number };
+  design: Record<string, number>;
+};
+
 export default function Home() {
-  const [cd, setCd] = useState("0.10");
-  const [cl, setCl] = useState("0.00");
-  const [cm, setCm] = useState("0.00");
-  const [mach, setMach] = useState("0.80");
-  const [aoa, setAoa] = useState("5.0");
+  const [fields, setFields] = useState({
+    cd:   "0.10",
+    cl:   "0.00",
+    cm:   "0.00",
+    mach: "0.80",
+    aoa:  "5.0",
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<any | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+  const [result, setResult]   = useState<DesignResult | null>(null);
+
+  function setField(key: keyof typeof fields, value: string) {
+    setFields((prev) => ({ ...prev, [key]: value }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setResult(null);
-
     try {
       const params = new URLSearchParams({
-        cd,
-        cl,
-        cm,
-        mach,
-        aoa,
+        cd:   fields.cd,
+        cl:   fields.cl,
+        cm:   fields.cm,
+        mach: fields.mach,
+        aoa:  fields.aoa,
       });
-
-      const res = await fetch(`/api/design?${params.toString()}`);
+      const res  = await fetch(`/api/design?${params}`);
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Request failed");
-      }
-
-      setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Unknown error");
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setResult(data as DesignResult);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
     }
   }
 
+  function handleReset() {
+    setResult(null);
+    setError(null);
+    setFields({ cd: "0.10", cl: "0.00", cm: "0.00", mach: "0.80", aoa: "5.0" });
+  }
+
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50 flex flex-col items-center px-4 py-10">
-      <div className="w-full max-w-3xl">
-        <h1 className="text-2xl md:text-3xl font-semibold mb-4">
-          Generative Missile Inverse Design
-        </h1>
-        <p className="text-sm md:text-base text-slate-300 mb-6">
-          Specify target aerodynamic coefficients and flight condition.
-          The backend Python generator will return a feasible missile geometry.
-        </p>
+    <>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');`}</style>
+      <main className="page">
+        <div className="container">
+          {/* Header */}
+          <header className="header">
+            <h1>
+              <span className="header-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+              </span>
+              Generative Missile Inverse Design
+            </h1>
+            <p>
+              Specify target aerodynamic coefficients and flight condition. The conditional GAN
+              generator returns a physically feasible 10-parameter missile geometry.
+            </p>
+          </header>
 
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-slate-900/60 border border-slate-800 rounded-lg p-4"
-        >
-          <Field label="Cd" value={cd} onChange={setCd} step="0.0001" />
-          <Field label="Cl" value={cl} onChange={setCl} step="0.0001" />
-          <Field label="Cm" value={cm} onChange={setCm} step="0.0001" />
-          <Field label="Mach" value={mach} onChange={setMach} step="0.01" />
-          <Field label="AoA (deg)" value={aoa} onChange={setAoa} step="0.1" />
+          {/* Form */}
+          <form onSubmit={handleSubmit}>
+            <div className="card">
+              <div className="card-title">Target Aerodynamic Condition</div>
+              <div className="form-grid">
+                <FormField id="cd"   label="Drag Coefficient" hint="Cd" step="0.0001" value={fields.cd}   onChange={(v) => setField("cd", v)} />
+                <FormField id="cl"   label="Lift Coefficient" hint="Cl" step="0.0001" value={fields.cl}   onChange={(v) => setField("cl", v)} />
+                <FormField id="cm"   label="Pitching Moment"  hint="Cm" step="0.0001" value={fields.cm}   onChange={(v) => setField("cm", v)} />
+                <FormField id="mach" label="Mach Number"      hint="Ma" step="0.01"   value={fields.mach} onChange={(v) => setField("mach", v)} />
+                <FormField id="aoa"  label="Angle of Attack"  hint="°"  step="0.1"    value={fields.aoa}  onChange={(v) => setField("aoa", v)} />
+              </div>
+              <div className="form-footer">
+                {result && (
+                  <button type="button" className="btn-ghost" onClick={handleReset}>
+                    Reset
+                  </button>
+                )}
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? <span className="spinner" role="status" aria-label="Generating" /> : null}
+                  {loading ? "Generating…" : "Generate Design"}
+                </button>
+              </div>
+            </div>
+          </form>
 
-          <div className="md:col-span-2 flex items-center justify-end mt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center px-4 py-2 rounded-md bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-700 text-slate-950 font-medium text-sm"
-            >
-              {loading ? "Generating..." : "Generate Design"}
-            </button>
-          </div>
-        </form>
+          {/* Error */}
+          {error && (
+            <div className="alert alert-error" role="alert">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              {error}
+            </div>
+          )}
 
-        {error && (
-          <div className="mb-4 text-sm text-red-400 bg-red-950/40 border border-red-800 rounded-md px-3 py-2">
-            {error}
-          </div>
-        )}
+          {/* Results */}
+          {result && (
+            <div className="card">
+              <div className="results-header">
+                <h2>Generated Geometry</h2>
+                <span className="badge">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="10"/>
+                  </svg>
+                  Feasible
+                </span>
+              </div>
 
-        {result && (
-          <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-4 text-sm overflow-x-auto">
-            <h2 className="font-semibold mb-2">Generated Design</h2>
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-800">
-                  <th className="py-1 pr-4">Parameter</th>
-                  <th className="py-1 pr-4">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(result.design || {}).map(([key, value]) => (
-                  <tr key={key} className="border-b border-slate-900">
-                    <td className="py-1 pr-4 font-mono text-xs md:text-sm">
-                      {key}
-                    </td>
-                    <td className="py-1 pr-4 font-mono text-xs md:text-sm">
-                      {typeof value === "number"
-                        ? value.toFixed(4)
-                        : String(value)}
-                    </td>
-                  </tr>
+              {/* Input echo */}
+              <div className="inputs-row" aria-label="Input conditions">
+                {Object.entries(result.inputs).map(([k, v], i, arr) => (
+                  <>
+                    <span key={k} className="input-chip">
+                      <span className="input-chip-label">{k}</span>
+                      <span className="input-chip-value">{(v as number).toFixed(4)}</span>
+                    </span>
+                    {i < arr.length - 1 && <span key={k+"-div"} className="divider" aria-hidden="true" />}
+                  </>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </main>
+              </div>
+
+              {/* Design table */}
+              <table className="design-table" aria-label="Missile geometry parameters">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Description</th>
+                    <th>Value</th>
+                    <th style={{ width: "100px" }}>Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(result.design).map(([key, value]) => {
+                    const meta = PARAM_META[key];
+                    const pct  = meta ? Math.max(0, Math.min(100, ((value - meta.min) / (meta.max - meta.min)) * 100)) : 50;
+                    return (
+                      <tr key={key}>
+                        <td><span className="param-name">{key}</span></td>
+                        <td style={{ color: "var(--color-text-muted)", fontSize: "var(--text-xs)" }}>
+                          {meta?.description ?? "—"}
+                        </td>
+                        <td>
+                          <span className="param-value">{value.toFixed(4)}</span>
+                          {meta && <span className="param-unit">{meta.unit}</span>}
+                        </td>
+                        <td>
+                          <div className="param-bar-wrap" aria-label={`${Math.round(pct)}% of range`}>
+                            <div className="param-bar-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <footer className="footer">
+            <a href="https://github.com/Flacko-07/generative-missile-design" target="_blank" rel="noopener noreferrer">
+              generative-missile-design
+            </a>
+            {" — Conditional GAN Inverse Design"}
+          </footer>
+        </div>
+      </main>
+    </>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  step,
+function FormField({
+  id, label, hint, step, value, onChange,
 }: {
+  id: string;
   label: string;
+  hint: string;
+  step: string;
   value: string;
   onChange: (v: string) => void;
-  step: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs md:text-sm">
-      <span className="text-slate-300">{label}</span>
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
       <input
+        id={id}
         type="number"
         step={step}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md bg-slate-950 border border-slate-700 px-2 py-1 text-xs md:text-sm font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
         required
+        inputMode="decimal"
       />
-    </label>
+      <span className="hint">{hint}</span>
+    </div>
   );
 }
