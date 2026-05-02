@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "functions": {
-    "api/design.py": {
-      "runtime": "@vercel/python@4.3.1"
-    }
-  }
+  "builds": [
+    { "src": "api/design.py", "use": "@vercel/python" },
+    { "src": "package.json", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/api/design", "dest": "/api/design.py" },
+    { "src": "/(.*)", "dest": "/" }
+  ]
 }
