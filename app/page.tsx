@@ -209,11 +209,33 @@ export default function Home() {
 
       <div className="workspace">
         {/* HERO */}
-        <header className="hero-row">
+        <header className="hero-row" aria-label="Introduction">
           <div className="hero-text">
-            <p className="eyebrow">Conditional GAN · Numpy inference</p>
+            <div className="hero-tag">CGAN inverse design · Missile geometry</div>
             <h1>Missile Geometry Console</h1>
-            <p className="hero-sub">Enter target aerodynamic coefficients to generate an optimal missile geometry using an inverse-design CGAN trained on CFD-augmented parametric sweep data.</p>
+            <p className="hero-sub">
+              Enter target aerodynamic coefficients to generate an optimal missile geometry using an inverse-design CGAN
+              trained on CFD-augmented parametric sweep data.
+            </p>
+            <div className="hero-actions">
+              <a href="#inference" className="hero-btn hero-btn-primary">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  aria-hidden="true"
+                >
+                  <polygon points="5,3 19,12 5,21" />
+                </svg>
+                Generate designs
+              </a>
+              <a href="#results" className="hero-btn hero-btn-ghost">
+                View latest result
+              </a>
+            </div>
           </div>
           <div className="hero-stats">
             <div className="stat"><strong>10</strong><span>Design params</span></div>
@@ -222,78 +244,98 @@ export default function Home() {
           </div>
         </header>
 
-        {/* MAIN LAYOUT */}
-        <div className="main-grid">
-          {/* LEFT: CONTROL PANEL */}
-          <aside className="control-panel">
-            <div className="panel-header">
-              <div>
-                <p className="panel-kicker">Target condition</p>
-                <h2>Aerodynamic Inputs</h2>
-              </div>
-              <button type="button" className="ghost-btn" onClick={handleReset}>Reset</button>
-            </div>
+        {/* INFERENCE SECTION */}
+        <section className="inference" id="inference" aria-label="Generate candidate designs">
+          <div className="section-label">On-demand inference</div>
+          <h2 className="section-title">Generate missile geometry for any Cd, Cl, Mach, and AoA</h2>
 
-            {/* PRESETS */}
-            <div className="preset-row">
-              <p className="preset-label">Presets</p>
-              <div className="preset-chips">
-                {PRESETS.map(p => (
-                  <button key={p.label} type="button" className="preset-chip" onClick={() => applyPreset(p)}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <form id="design-form" onSubmit={handleSubmit}>
-              <div className="field-grid">
-                {FIELD_CONFIGS.map(config => (
-                  <FormField
-                    key={config.key}
-                    config={config}
-                    value={fields[config.key]}
-                    onChange={v => setField(config.key, v)}
-                  />
-                ))}
-              </div>
-
-              <button className="primary-btn" type="submit" disabled={loading}>
-                {loading ? (
-                  <><span className="spinner" /><span>Generating&hellip;</span></>
-                ) : (
-                  <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><polyline points="5 12 12 5 19 12" /><line x1="12" y1="5" x2="12" y2="19" /></svg><span>Generate design</span></>
-                )}
-              </button>
-            </form>
-          </aside>
-
-          {/* RIGHT: PREVIEW */}
-          <section className={`preview-panel ${result ? "preview-has-result" : ""}`}>
-            <div className="panel-header">
-              <div>
-                <p className="panel-kicker">Geometry profile</p>
-                <h2>{result ? "Generated design" : "Preview"}</h2>
-              </div>
-              <span className={`result-pill ${result ? "is-live" : ""}`}>
-                {result ? "Model output" : "Awaiting run"}
-              </span>
-            </div>
-
-            <DesignPreview design={result?.design ?? PREVIEW_DESIGN} hasResult={Boolean(result)} loading={loading} />
-
-            <div className="metric-grid">
-              {metrics.map(m => (
-                <div className="metric-card" key={m.label}>
-                  <span className="metric-icon">{m.icon}</span>
-                  <strong className={loading ? "skeleton-text" : ""}>{m.value}</strong>
-                  <p className="metric-label">{m.label}</p>
-                  <small>{m.detail}</small>
+          {/* MAIN LAYOUT */}
+          <div className="main-grid">
+            {/* LEFT: CONTROL PANEL */}
+            <aside className="control-panel">
+              <div className="panel-header">
+                <div>
+                  <p className="panel-kicker">Target condition</p>
+                  <h2>Aerodynamic Inputs</h2>
                 </div>
-              ))}
-            </div>
-          </section>
-        </div>
+                <button type="button" className="ghost-btn" onClick={handleReset}>Reset</button>
+              </div>
+
+              {/* PRESETS */}
+              <div className="preset-row">
+                <p className="preset-label">Presets</p>
+                <div className="preset-chips">
+                  {PRESETS.map(p => (
+                    <button key={p.label} type="button" className="preset-chip" onClick={() => applyPreset(p)}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <form id="design-form" onSubmit={handleSubmit}>
+                <div className="field-grid">
+                  {FIELD_CONFIGS.map(config => (
+                    <FormField
+                      key={config.key}
+                      config={config}
+                      value={fields[config.key]}
+                      onChange={v => setField(config.key, v)}
+                    />
+                  ))}
+                </div>
+
+                <button className="primary-btn" type="submit" disabled={loading}>
+                  {loading ? (
+                    <><span className="spinner" /><span>Generating&hellip;</span></>
+                  ) : (
+                    <>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        aria-hidden="true"
+                      >
+                        <polyline points="5 12 12 5 19 12" />
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                      </svg>
+                      <span>Generate design</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </aside>
+
+            {/* RIGHT: PREVIEW */}
+            <section className={`preview-panel ${result ? "preview-has-result" : ""}`}>
+              <div className="panel-header">
+                <div>
+                  <p className="panel-kicker">Geometry profile</p>
+                  <h2>{result ? "Generated design" : "Preview"}</h2>
+                </div>
+                <span className={`result-pill ${result ? "is-live" : ""}`}>
+                  {result ? "Model output" : "Awaiting run"}
+                </span>
+              </div>
+
+              <DesignPreview design={result?.design ?? PREVIEW_DESIGN} hasResult={Boolean(result)} loading={loading} />
+
+              <div className="metric-grid">
+                {metrics.map(m => (
+                  <div className="metric-card" key={m.label}>
+                    <span className="metric-icon">{m.icon}</span>
+                    <strong className={loading ? "skeleton-text" : ""}>{m.value}</strong>
+                    <p className="metric-label">{m.label}</p>
+                    <small>{m.detail}</small>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </section>
 
         {/* ERROR BANNER */}
         {error && (
@@ -308,141 +350,146 @@ export default function Home() {
           </div>
         )}
 
-        {/* RESULTS TABLE */}
-        <section className={`results-section ${result ? "results-has-result" : ""}`}>
-          <div className="panel-header">
-            <div>
-              <p className="panel-kicker">Numerical output</p>
-              <h2>Design Parameters</h2>
-            </div>
-            <div className="results-actions">
-              <div className="tab-group">
-                <button
-                  className={`tab-btn ${activeTab === "table" ? "is-active" : ""}`}
-                  onClick={() => setActiveTab("table")}
-                  type="button"
-                >Table</button>
-                <button
-                  className={`tab-btn ${activeTab === "json" ? "is-active" : ""}`}
-                  onClick={() => setActiveTab("json")}
-                  type="button"
-                  disabled={!result}
-                >JSON</button>
-              </div>
-              <button className="ghost-btn" disabled={!result} onClick={handleCopy}>
-                {copied ? "✓ Copied" : "Copy JSON"}
-              </button>
-            </div>
-          </div>
+        {/* RESULTS SECTION */}
+        <section className="data-section" id="results" aria-label="Design output">
+          <div className="section-label">Design output</div>
+          <h2 className="section-title">Target loads → geometry breakdown</h2>
 
-          {!loading && result && (
-            <div className="result-summary">
-              <div className="result-summary-main">
-                <span className="result-pill is-live">CGAN result</span>
-                <h3>Design snapshot</h3>
-                <p>
-                  L/D {formatNumber(
-                    (result.design.nose_length +
+          <section className={`results-section ${result ? "results-has-result" : ""}`}>
+            <div className="panel-header">
+              <div>
+                <p className="panel-kicker">Numerical output</p>
+                <h2>Design Parameters</h2>
+              </div>
+              <div className="results-actions">
+                <div className="tab-group">
+                  <button
+                    className={`tab-btn ${activeTab === "table" ? "is-active" : ""}`}
+                    onClick={() => setActiveTab("table")}
+                    type="button"
+                  >Table</button>
+                  <button
+                    className={`tab-btn ${activeTab === "json" ? "is-active" : ""}`}
+                    onClick={() => setActiveTab("json")}
+                    type="button"
+                    disabled={!result}
+                  >JSON</button>
+                </div>
+                <button className="ghost-btn" disabled={!result} onClick={handleCopy}>
+                  {copied ? "✓ Copied" : "Copy JSON"}
+                </button>
+              </div>
+            </div>
+
+            {!loading && result && (
+              <div className="result-summary">
+                <div className="result-summary-main">
+                  <span className="result-pill is-live">CGAN result</span>
+                  <h3>Design snapshot</h3>
+                  <p>
+                    L/D {formatNumber(
+                      (result.design.nose_length +
+                        result.design.body_length +
+                        result.design.flare_length) /
+                      Math.max(result.design.body_diameter, 0.001)
+                    )},{" "}
+                    total length{" "}
+                    {formatNumber(
+                      result.design.nose_length +
                       result.design.body_length +
-                      result.design.flare_length) /
-                    Math.max(result.design.body_diameter, 0.001)
-                  )},{" "}
-                  total length{" "}
-                  {formatNumber(
-                    result.design.nose_length +
-                    result.design.body_length +
-                    result.design.flare_length
-                  )}{" "}
-                  m.
-                </p>
+                      result.design.flare_length
+                    )}{" "}
+                    m.
+                  </p>
+                </div>
+                <div className="result-summary-chips">
+                  <span className="summary-chip">
+                    <small>Mach</small>
+                    <strong>{formatNumber(result.inputs.Mach)}</strong>
+                  </span>
+                  <span className="summary-chip">
+                    <small>AoA</small>
+                    <strong>{formatNumber(result.inputs.AoA)}</strong>
+                  </span>
+                  <span className="summary-chip">
+                    <small>Cd</small>
+                    <strong>{formatNumber(result.inputs.Cd)}</strong>
+                  </span>
+                  <span className="summary-chip">
+                    <small>Cl</small>
+                    <strong>{formatNumber(result.inputs.Cl)}</strong>
+                  </span>
+                </div>
               </div>
-              <div className="result-summary-chips">
-                <span className="summary-chip">
-                  <small>Mach</small>
-                  <strong>{formatNumber(result.inputs.Mach)}</strong>
-                </span>
-                <span className="summary-chip">
-                  <small>AoA</small>
-                  <strong>{formatNumber(result.inputs.AoA)}</strong>
-                </span>
-                <span className="summary-chip">
-                  <small>Cd</small>
-                  <strong>{formatNumber(result.inputs.Cd)}</strong>
-                </span>
-                <span className="summary-chip">
-                  <small>Cl</small>
-                  <strong>{formatNumber(result.inputs.Cl)}</strong>
-                </span>
-              </div>
-            </div>
-          )}
+            )}
 
-          {loading ? (
-            <SkeletonTable />
-          ) : result && activeTab === "table" ? (
-            <>
-              <InputSummary inputs={result.inputs} />
-              <div className="table-scroll">
-                <table className="design-table">
-                  <thead>
-                    <tr>
-                      <th>Parameter</th>
-                      <th>Value</th>
-                      <th style={{ minWidth: 180 }}>Range position</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupedKeys.map(({ group, keys }) => (
-                      keys.length > 0 ? (
-                        <>
-                          <tr className="group-row" key={group}>
-                            <td colSpan={4}>{GROUP_LABELS[group]}</td>
-                          </tr>
-                          {keys.map(key => {
-                            const value = result.design[key];
-                            const meta = PARAM_META[key];
-                            const pct = rangePercent(value, meta.min, meta.max);
-                            const colorClass = pct < 20 ? "bar-low" : pct > 80 ? "bar-high" : "bar-mid";
-                            return (
-                              <tr key={key}>
-                                <td>
-                                  <span className="param-name">{meta.label}</span>
-                                  <code>{key}</code>
-                                </td>
-                                <td>
-                                  <span className="value-cell">
-                                    {formatNumber(value)}
-                                    <small>{meta.unit}</small>
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className="range-cell">
-                                    <div className="range-track">
-                                      <div
-                                        className={`range-fill ${colorClass}`}
-                                        style={{ width: `${Math.max(pct, 2)}%` }}
-                                      />
+            {loading ? (
+              <SkeletonTable />
+            ) : result && activeTab === "table" ? (
+              <>
+                <InputSummary inputs={result.inputs} />
+                <div className="table-scroll">
+                  <table className="design-table">
+                    <thead>
+                      <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                        <th style={{ minWidth: 180 }}>Range position</th>
+                        <th>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupedKeys.map(({ group, keys }) => (
+                        keys.length > 0 ? (
+                          <>
+                            <tr className="group-row" key={group}>
+                              <td colSpan={4}>{GROUP_LABELS[group]}</td>
+                            </tr>
+                            {keys.map(key => {
+                              const value = result.design[key];
+                              const meta = PARAM_META[key];
+                              const pct = rangePercent(value, meta.min, meta.max);
+                              const colorClass = pct < 20 ? "bar-low" : pct > 80 ? "bar-high" : "bar-mid";
+                              return (
+                                <tr key={key}>
+                                  <td>
+                                    <span className="param-name">{meta.label}</span>
+                                    <code>{key}</code>
+                                  </td>
+                                  <td>
+                                    <span className="value-cell">
+                                      {formatNumber(value)}
+                                      <small>{meta.unit}</small>
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div className="range-cell">
+                                      <div className="range-track">
+                                        <div
+                                          className={`range-fill ${colorClass}`}
+                                          style={{ width: `${Math.max(pct, 2)}%` }}
+                                        />
+                                      </div>
+                                      <span className="range-pct">{Math.round(pct)}%</span>
                                     </div>
-                                    <span className="range-pct">{Math.round(pct)}%</span>
-                                  </div>
-                                </td>
-                                <td className="desc-cell">{meta.description}</td>
-                              </tr>
-                            );
-                          })}
-                        </>
-                      ) : null
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : result && activeTab === "json" ? (
-            <pre className="json-view">{JSON.stringify(result, null, 2)}</pre>
-          ) : (
-            <EmptyState />
-          )}
+                                  </td>
+                                  <td className="desc-cell">{meta.description}</td>
+                                </tr>
+                              );
+                            })}
+                          </>
+                        ) : null
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : result && activeTab === "json" ? (
+              <pre className="json-view">{JSON.stringify(result, null, 2)}</pre>
+            ) : (
+              <EmptyState />
+            )}
+          </section>
         </section>
       </div>
 
