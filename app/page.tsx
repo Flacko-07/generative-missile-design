@@ -71,7 +71,6 @@ export default function Home() {
         <div className="navbar-inner">
           <a href="#" className="nav-logo" aria-label="Home">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-              {/* Missile silhouette mark */}
               <path d="M14 3 L17 10 L17 20 L14 25 L11 20 L11 10 Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
               <path d="M11 18 L7 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               <path d="M17 18 L21 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -81,8 +80,8 @@ export default function Home() {
           </a>
           <div className="nav-links">
             <span className="nav-status">
-              <span className="status-dot" aria-hidden="true" />
-              GAN Ready
+              <span className={`status-dot${loading ? " status-dot--busy" : ""}`} aria-hidden="true" />
+              {loading ? "Generating…" : "GAN Ready"}
             </span>
             <a
               href="https://github.com/Flacko-07/generative-missile-design"
@@ -123,14 +122,14 @@ export default function Home() {
             <div className="card">
               <div className="card-header">
                 <span className="card-title">Target Aerodynamic Condition</span>
-                <span className={`regime-badge ${regime.cls}`}>{regime.label} · Ma {fields.mach}</span>
+                <span className={`regime-badge ${regime.cls}`}>{regime.label} · Ma&nbsp;{fields.mach}</span>
               </div>
               <div className="form-grid">
-                <FormField id="cd"   label="Drag Coeff." unit="Cd"  step="0.0001" value={fields.cd}   onChange={(v) => setField("cd", v)} />
-                <FormField id="cl"   label="Lift Coeff." unit="Cl"  step="0.0001" value={fields.cl}   onChange={(v) => setField("cl", v)} />
-                <FormField id="cm"   label="Pitch Moment" unit="Cm" step="0.0001" value={fields.cm}   onChange={(v) => setField("cm", v)} />
-                <FormField id="mach" label="Mach Number" unit="Ma"  step="0.01"   value={fields.mach} onChange={(v) => setField("mach", v)} />
-                <FormField id="aoa"  label="Angle of Attack" unit="°" step="0.1" value={fields.aoa}  onChange={(v) => setField("aoa", v)} />
+                <FormField id="cd"   label="Drag Coeff."     unit="Cd"  step="0.0001" value={fields.cd}   onChange={(v) => setField("cd",   v)} />
+                <FormField id="cl"   label="Lift Coeff."     unit="Cl"  step="0.0001" value={fields.cl}   onChange={(v) => setField("cl",   v)} />
+                <FormField id="cm"   label="Pitch Moment"    unit="Cm"  step="0.0001" value={fields.cm}   onChange={(v) => setField("cm",   v)} />
+                <FormField id="mach" label="Mach Number"     unit="Ma"  step="0.01"   value={fields.mach} onChange={(v) => setField("mach", v)} />
+                <FormField id="aoa"  label="Angle of Attack" unit="°"   step="0.1"    value={fields.aoa}  onChange={(v) => setField("aoa",  v)} />
               </div>
               <div className="form-footer">
                 {result && (
@@ -143,11 +142,12 @@ export default function Home() {
                   </button>
                 )}
                 <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? <span className="spinner" role="status" aria-label="Generating" /> : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                    </svg>
-                  )}
+                  {loading
+                    ? <span className="spinner" role="status" aria-label="Generating" />
+                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                      </svg>
+                  }
                   {loading ? "Generating…" : "Generate Design"}
                 </button>
               </div>
@@ -196,14 +196,19 @@ export default function Home() {
                     <th>Parameter</th>
                     <th>Description</th>
                     <th>Value</th>
-                    <th style={{ width: "110px" }}>Range</th>
+                    <th style={{ width: "130px" }}>Range</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(result.design).map(([key, value]) => {
                     const meta = PARAM_META[key];
-                    const pct  = meta ? Math.max(0, Math.min(100, ((value - meta.min) / (meta.max - meta.min)) * 100)) : 50;
-                    const barColor = pct > 80 ? "var(--color-warn)" : pct < 20 ? "var(--color-blue)" : "var(--color-primary)";
+                    const pct  = meta
+                      ? Math.max(0, Math.min(100, ((value - meta.min) / (meta.max - meta.min)) * 100))
+                      : 50;
+                    const barColor =
+                      pct > 80 ? "var(--color-warn)"
+                      : pct < 20 ? "var(--color-blue)"
+                      : "var(--color-primary)";
                     return (
                       <tr key={key}>
                         <td><code className="param-name">{key}</code></td>
@@ -213,8 +218,20 @@ export default function Home() {
                           {meta && <span className="param-unit">{meta.unit}</span>}
                         </td>
                         <td>
-                          <div className="param-bar-wrap" role="meter" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label={`${Math.round(pct)}% of range`}>
-                            <div className="param-bar-fill" style={{ width: `${pct}%`, background: barColor }} />
+                          <div
+                            className="param-bar-wrap"
+                            role="meter"
+                            aria-valuenow={Math.round(pct)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${Math.round(pct)}% of range`}
+                          >
+                            <div className="param-bar-track">
+                              <div
+                                className="param-bar-fill"
+                                style={{ width: `${pct}%`, background: barColor }}
+                              />
+                            </div>
                             <span className="param-bar-pct">{Math.round(pct)}%</span>
                           </div>
                         </td>
