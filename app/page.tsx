@@ -2,6 +2,19 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
+// Typography scale helpers
+const H1 = ({ children }: { children: React.ReactNode }) => (
+  <h1 className="typo-h1">{children}</h1>
+);
+
+const H2 = ({ children }: { children: React.ReactNode }) => (
+  <h2 className="typo-h2">{children}</h2>
+);
+
+const Lead = ({ children }: { children: React.ReactNode }) => (
+  <p className="typo-lead">{children}</p>
+);
+
 type FieldKey = "cd" | "cl" | "cm" | "mach" | "aoa";
 type InputKey = "Cd" | "Cl" | "Cm" | "Mach" | "AoA";
 type ParamKey =
@@ -37,7 +50,7 @@ type ParamMeta = {
 
 type DesignResult = {
   inputs: Record<InputKey, number>;
-  design: Record<ParamKey, number>;
+  design: Record[ParamKey, number>;
 };
 
 type Metric = {
@@ -212,11 +225,11 @@ export default function Home() {
         <header className="hero-row" aria-label="Introduction">
           <div className="hero-text">
             <div className="hero-tag">CGAN inverse design · Missile geometry</div>
-            <h1>Missile Geometry Console</h1>
-            <p className="hero-sub">
+            <H1>Missile Geometry Console</H1>
+            <Lead>
               Enter target aerodynamic coefficients to generate an optimal missile geometry using an inverse-design CGAN
               trained on CFD-augmented parametric sweep data.
-            </p>
+            </Lead>
             <div className="hero-actions">
               <a href="#inference" className="hero-btn hero-btn-primary">
                 <svg
@@ -247,7 +260,7 @@ export default function Home() {
         {/* INFERENCE SECTION */}
         <section className="inference" id="inference" aria-label="Generate candidate designs">
           <div className="section-label">On-demand inference</div>
-          <h2 className="section-title">Generate missile geometry for any Cd, Cl, Mach, and AoA</h2>
+          <H2>Generate missile geometry for any Cd, Cl, Mach, and AoA</H2>
 
           {/* MAIN LAYOUT */}
           <div className="main-grid">
@@ -353,7 +366,7 @@ export default function Home() {
         {/* RESULTS SECTION */}
         <section className="data-section" id="results" aria-label="Design output">
           <div className="section-label">Design output</div>
-          <h2 className="section-title">Target loads → geometry breakdown</h2>
+          <H2>Target loads → geometry breakdown</H2>
 
           <section className={`results-section ${result ? "results-has-result" : ""}`}>
             <div className="panel-header">
