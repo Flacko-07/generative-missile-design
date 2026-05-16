@@ -1,17 +1,18 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 // Typography scale helpers
-const H1 = ({ children }: { children: React.ReactNode }) => (
+const H1 = ({ children }: { children: ReactNode }) => (
   <h1 className="typo-h1">{children}</h1>
 );
 
-const H2 = ({ children }: { children: React.ReactNode }) => (
+const H2 = ({ children }: { children: ReactNode }) => (
   <h2 className="typo-h2">{children}</h2>
 );
 
-const Lead = ({ children }: { children: React.ReactNode }) => (
+const Lead = ({ children }: { children: ReactNode }) => (
   <p className="typo-lead">{children}</p>
 );
 
@@ -50,7 +51,7 @@ type ParamMeta = {
 
 type DesignResult = {
   inputs: Record<InputKey, number>;
-  design: Record[ParamKey, number>;
+  design: Record<ParamKey, number>;
 };
 
 type Metric = {
