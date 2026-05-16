@@ -101,7 +101,6 @@ async function fetchWithRetry(url: string, maxAttempts = 3): Promise<Response> {
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const res = await fetch(url, { cache: "no-store" });
-      // If it returned 200 but might have a body error, let caller decide
       return res;
     } catch (err) {
       lastErr = err;
@@ -119,7 +118,10 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"table" | "json">("table");
 
-  const metrics = useMemo(() => buildMetrics(result?.design ?? null), [result]);
+  const metrics = useMemo(
+    () => buildMetrics(result?.design ?? PREVIEW_DESIGN, Boolean(result)),
+    [result]
+  );
   const runState = loading ? "running" : error ? "error" : result ? "complete" : "ready";
 
   function setField(key: FieldKey, value: string) {
@@ -270,7 +272,7 @@ export default function Home() {
           </aside>
 
           {/* RIGHT: PREVIEW */}
-          <section className="preview-panel">
+          <section className={`preview-panel ${result ? "preview-has-result" : ""}`}>
             <div className="panel-header">
               <div>
                 <p className="panel-kicker">Geometry profile</p>
@@ -310,7 +312,7 @@ export default function Home() {
         )}
 
         {/* RESULTS TABLE */}
-        <section className="results-section">
+        <section className={`results-section ${result ? "results-has-result" : ""}`}>
           <div className="panel-header">
             <div>
               <p className="panel-kicker">Numerical output</p>
@@ -496,46 +498,36 @@ function DesignPreview({ design, hasResult, loading }: {
           </filter>
         </defs>
 
-        {/* Grid lines */}
         {[cy - 60, cy - 30, cy, cy + 30, cy + 60].map(y => (
           <line key={y} x1="60" x2="660" y1={y} y2={y}
             stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
         ))}
 
-        {/* Axis */}
         <line className="axis" x1="55" x2="665" y1={cy} y2={cy} />
         <polygon className="arrowhead" points={`665,${cy} 658,${cy-4} 658,${cy+4}`} fill="rgba(76,201,240,0.5)" />
 
-        {/* Fin shadows (bottom) */}
         <polygon className="fin fin-shadow"
           points={`${finBase},${bot-2} ${finBase+finW+sweepOff},${bot-2} ${finBase+finW*0.42},${bot+finH}`} />
-        {/* Body */}
         <rect x={ne} y={top} width={bodyWidth} height={bodyH} rx="4" fill="url(#bodyGrad)"
           stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
-        {/* Nose */}
         <polygon className="nose-poly"
           points={`${sx},${cy} ${ne},${top} ${ne},${bot}`} />
-        {/* Flare */}
         <polygon className="flare-poly"
           points={`${be},${top} ${fe},${top+bodyH*0.18} ${fe},${bot-bodyH*0.18} ${be},${bot}`} />
-        {/* Fins (top) */}
         <polygon className="fin fin-top"
           points={`${finBase},${top+2} ${finBase+finW+sweepOff},${top+2} ${finBase+finW*0.42},${top-finH}`} />
         <polygon className="fin fin-bot"
           points={`${finBase},${bot-2} ${finBase+finW+sweepOff},${bot-2} ${finBase+finW*0.42},${bot+finH}`} />
 
-        {/* Glow tip */}
         <circle cx={sx} cy={cy} r="5" fill="#4cc9f0" filter="url(#glow)" />
         <circle cx={sx} cy={cy} r="3" fill="#fff" />
 
-        {/* Labels */}
         <text className="svg-label" x={sx + noseWidth/2 - 14} y="208">nose</text>
         <text className="svg-label" x={ne + bodyWidth/2 - 14} y="208">body</text>
         {design.flare_length > 0.02 && (
           <text className="svg-label" x={Math.min(be + 4, 620)} y="208">flare</text>
         )}
 
-        {/* Dimension line */}
         <line x1={sx} x2={fe} y1="226" y2="226" stroke="rgba(76,201,240,0.25)" strokeWidth="1" />
         <text className="svg-dim" x={(sx + fe) / 2 - 26} y="222">
           L = {formatNumber(totalLength)} m
@@ -575,21 +567,36 @@ function EmptyState() {
   );
 }
 
-function buildMetrics(design: Record<ParamKey, number> | null): Metric[] {
-  if (!design) return [
-    { label: "Total length", value: "—", detail: "nose + body + flare", icon: "📏" },
-    { label: "L/D ratio",    value: "—", detail: "slenderness ratio",   icon: "⚡" },
-    { label: "Fin area",     value: "—", detail: "span × chord",        icon: "◈" },
-    { label: "Aft flare",    value: "—", detail: "angle & length",      icon: "🔺" },
-  ];
+function buildMetrics(design: Record<ParamKey, number>, isRealResult: boolean): Metric[] {
   const totalLength = design.nose_length + design.body_length + design.flare_length;
   const ld = totalLength / Math.max(design.body_diameter, 0.001);
   const finArea = design.fin_span * design.fin_chord;
+
   return [
-    { label: "Total length", value: `${formatNumber(totalLength)} m`, detail: "nose + body + flare", icon: "📏" },
-    { label: "L/D ratio",    value: formatNumber(ld),                  detail: "slenderness ratio",  icon: "⚡" },
-    { label: "Fin area",     value: `${formatNumber(finArea)} m²`,     detail: "span × chord",       icon: "◈" },
-    { label: "Aft flare",    value: `${formatNumber(design.flare_angle_deg)}°`, detail: `${formatNumber(design.flare_length)} m section`, icon: "🔺" },
+    {
+      label: "Total length",
+      value: `${formatNumber(totalLength)} m`,
+      detail: isRealResult ? "nose + body + flare" : "Static preview geometry",
+      icon: "📏",
+    },
+    {
+      label: "L/D ratio",
+      value: formatNumber(ld),
+      detail: isRealResult ? "slenderness ratio" : "Preview slenderness estimate",
+      icon: "⚡",
+    },
+    {
+      label: "Fin area",
+      value: `${formatNumber(finArea)} m²`,
+      detail: isRealResult ? "span × chord" : "Preview fin planform area",
+      icon: "◈",
+    },
+    {
+      label: "Aft flare",
+      value: `${formatNumber(design.flare_angle_deg)}°`,
+      detail: `${formatNumber(design.flare_length)} m section`,
+      icon: "🔺",
+    },
   ];
 }
 
