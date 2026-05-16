@@ -1,285 +1,528 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
-const PARAM_META: Record<string, { unit: string; min: number; max: number; description: string }> = {
-  nose_length:     { unit: "m",  min: 0.2,   max: 2.5,  description: "Nose cone length" },
-  body_diameter:   { unit: "m",  min: 0.15,  max: 0.6,  description: "Body outer diameter" },
-  body_length:     { unit: "m",  min: 0.8,   max: 7.0,  description: "Total body length" },
-  fin_span:        { unit: "m",  min: 0.0,   max: 1.2,  description: "Fin full span" },
-  fin_chord:       { unit: "m",  min: 0.0,   max: 0.8,  description: "Fin root chord" },
-  fin_thickness:   { unit: "m",  min: 0.0,   max: 0.08, description: "Fin thickness" },
-  fin_sweep_deg:   { unit: "°",  min: -45,   max: 45,   description: "Fin sweep angle" },
-  fin_offset:      { unit: "m",  min: -0.2,  max: 0.5,  description: "Fin axial offset" },
-  flare_angle_deg: { unit: "°",  min: 0.0,   max: 15,   description: "Boattail / flare angle" },
-  flare_length:    { unit: "m",  min: 0.0,   max: 0.5,  description: "Flare section length" },
+type FieldKey = "cd" | "cl" | "cm" | "mach" | "aoa";
+type InputKey = "Cd" | "Cl" | "Cm" | "Mach" | "AoA";
+type ParamKey =
+  | "nose_length"
+  | "body_diameter"
+  | "body_length"
+  | "fin_span"
+  | "fin_chord"
+  | "fin_thickness"
+  | "fin_sweep_deg"
+  | "fin_offset"
+  | "flare_angle_deg"
+  | "flare_length";
+
+type FieldConfig = {
+  key: FieldKey;
+  label: string;
+  symbol: string;
+  step: string;
+  min: string;
+  max: string;
 };
 
-function getMachRegime(mach: number) {
-  if (mach < 0.8)  return { label: "Subsonic",    cls: "regime-sub" };
-  if (mach < 1.2)  return { label: "Transonic",   cls: "regime-trans" };
-  if (mach < 5.0)  return { label: "Supersonic",  cls: "regime-super" };
-  return             { label: "Hypersonic",  cls: "regime-hyper" };
-}
+type ParamMeta = {
+  label: string;
+  unit: string;
+  min: number;
+  max: number;
+  description: string;
+};
 
 type DesignResult = {
-  inputs: { Cd: number; Cl: number; Cm: number; Mach: number; AoA: number };
-  design: Record<string, number>;
+  inputs: Record<InputKey, number>;
+  design: Record<ParamKey, number>;
+};
+
+type Metric = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
+const FIELD_CONFIGS: FieldConfig[] = [
+  { key: "cd", label: "Drag coefficient", symbol: "Cd", step: "0.0001", min: "-1", max: "2" },
+  { key: "cl", label: "Lift coefficient", symbol: "Cl", step: "0.0001", min: "-2", max: "2" },
+  { key: "cm", label: "Pitching moment", symbol: "Cm", step: "0.0001", min: "-2", max: "2" },
+  { key: "mach", label: "Mach number", symbol: "Ma", step: "0.01", min: "0.05", max: "8" },
+  { key: "aoa", label: "Angle of attack", symbol: "AoA", step: "0.1", min: "-20", max: "30" },
+];
+
+const DESIGN_KEYS: ParamKey[] = [
+  "nose_length",
+  "body_diameter",
+  "body_length",
+  "fin_span",
+  "fin_chord",
+  "fin_thickness",
+  "fin_sweep_deg",
+  "fin_offset",
+  "flare_angle_deg",
+  "flare_length",
+];
+
+const PARAM_META: Record<ParamKey, ParamMeta> = {
+  nose_length: {
+    label: "Nose length",
+    unit: "m",
+    min: 0.2,
+    max: 2.5,
+    description: "Forward cone section",
+  },
+  body_diameter: {
+    label: "Body diameter",
+    unit: "m",
+    min: 0.15,
+    max: 0.6,
+    description: "Outer cylindrical diameter",
+  },
+  body_length: {
+    label: "Body length",
+    unit: "m",
+    min: 0.8,
+    max: 7.0,
+    description: "Primary fuselage length",
+  },
+  fin_span: {
+    label: "Fin span",
+    unit: "m",
+    min: 0,
+    max: 1.2,
+    description: "Full stabilizer span",
+  },
+  fin_chord: {
+    label: "Fin chord",
+    unit: "m",
+    min: 0,
+    max: 0.8,
+    description: "Root chord length",
+  },
+  fin_thickness: {
+    label: "Fin thickness",
+    unit: "m",
+    min: 0,
+    max: 0.08,
+    description: "Stabilizer section thickness",
+  },
+  fin_sweep_deg: {
+    label: "Fin sweep",
+    unit: "deg",
+    min: -45,
+    max: 45,
+    description: "Leading edge sweep angle",
+  },
+  fin_offset: {
+    label: "Fin offset",
+    unit: "m",
+    min: -0.2,
+    max: 0.5,
+    description: "Axial fin station adjustment",
+  },
+  flare_angle_deg: {
+    label: "Flare angle",
+    unit: "deg",
+    min: 0,
+    max: 15,
+    description: "Aft flare or boattail angle",
+  },
+  flare_length: {
+    label: "Flare length",
+    unit: "m",
+    min: 0,
+    max: 0.5,
+    description: "Aft transition section",
+  },
+};
+
+const DEFAULT_FIELDS: Record<FieldKey, string> = {
+  cd: "0.10",
+  cl: "0.00",
+  cm: "0.00",
+  mach: "0.80",
+  aoa: "5.0",
+};
+
+const PREVIEW_DESIGN: Record<ParamKey, number> = {
+  nose_length: 0.56,
+  body_diameter: 0.32,
+  body_length: 2.98,
+  fin_span: 0.12,
+  fin_chord: 0.12,
+  fin_thickness: 0.015,
+  fin_sweep_deg: 11.5,
+  fin_offset: 0.025,
+  flare_angle_deg: 6.2,
+  flare_length: 0.13,
 };
 
 export default function Home() {
-  const [fields, setFields] = useState({ cd: "0.10", cl: "0.00", cm: "0.00", mach: "0.80", aoa: "5.0" });
+  const [fields, setFields] = useState<Record<FieldKey, string>>(DEFAULT_FIELDS);
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-  const [result,  setResult]  = useState<DesignResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<DesignResult | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  function setField(key: keyof typeof fields, value: string) {
+  const metrics = useMemo(() => buildMetrics(result?.design ?? null), [result]);
+  const runState = loading ? "running" : error ? "error" : result ? "complete" : "ready";
+
+  function setField(key: FieldKey, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setLoading(true);
     setError(null);
-    setResult(null);
+    setCopied(false);
+
     try {
-      const params = new URLSearchParams(fields);
-      const res  = await fetch(`/api/design?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const params = new URLSearchParams({
+        cd: fields.cd,
+        cl: fields.cl,
+        cm: fields.cm,
+        mach: fields.mach,
+        aoa: fields.aoa,
+      });
+
+      const response = await fetch(`/api/design?${params.toString()}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed with HTTP ${response.status}`);
+      }
+
       setResult(data as DesignResult);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+    } catch (err) {
+      setResult(null);
+      setError(err instanceof Error ? err.message : "The design request failed.");
     } finally {
       setLoading(false);
     }
   }
 
   function handleReset() {
+    setFields(DEFAULT_FIELDS);
     setResult(null);
     setError(null);
-    setFields({ cd: "0.10", cl: "0.00", cm: "0.00", mach: "0.80", aoa: "5.0" });
+    setCopied(false);
   }
 
-  const machNum = parseFloat(fields.mach);
-  const regime  = getMachRegime(isNaN(machNum) ? 0 : machNum);
+  async function handleCopy() {
+    if (!result) return;
+    await navigator.clipboard.writeText(JSON.stringify(result, null, 2));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
 
   return (
-    <>
-      {/* ── Nav ── */}
-      <nav className="navbar" aria-label="Site navigation">
-        <div className="navbar-inner">
-          <a href="#" className="nav-logo" aria-label="Home">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-              <path d="M14 3 L17 10 L17 20 L14 25 L11 20 L11 10 Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-              <path d="M11 18 L7 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M17 18 L21 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="14" cy="9" r="1.5" fill="currentColor" />
-            </svg>
-            <span>MissileGAN</span>
-          </a>
-          <div className="nav-links">
-            <span className="nav-status">
-              <span className={`status-dot${loading ? " status-dot--busy" : ""}`} aria-hidden="true" />
-              {loading ? "Generating…" : "GAN Ready"}
-            </span>
-            <a
-              href="https://github.com/Flacko-07/generative-missile-design"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nav-link"
-              aria-label="GitHub repository"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
-              </svg>
-              GitHub
-            </a>
+    <main className="app-shell">
+      <section className="workspace" aria-label="Missile inverse design workspace">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Generative inverse design</p>
+            <h1>Missile Geometry Console</h1>
           </div>
-        </div>
-      </nav>
+          <div className={`run-status is-${runState}`} aria-live="polite">
+            <span className="status-dot" aria-hidden="true" />
+            {statusLabel(runState)}
+          </div>
+        </header>
 
-      <main className="page">
-        <div className="container">
-
-          {/* ── Hero ── */}
-          <header className="hero">
-            <div className="hero-eyebrow">
-              <span className={`regime-badge ${regime.cls}`}>{regime.label}</span>
-              <span className="hero-eyebrow-text">Conditional GAN · Inverse Design</span>
+        <div className="main-grid">
+          <form className="control-panel" onSubmit={handleSubmit}>
+            <div className="panel-heading">
+              <div>
+                <p className="panel-kicker">Target condition</p>
+                <h2>Inputs</h2>
+              </div>
+              <button type="button" className="text-button" onClick={handleReset}>
+                Reset
+              </button>
             </div>
-            <h1 className="hero-title">
-              Generative <span className="accent">Missile</span> Design
-            </h1>
-            <p className="hero-sub">
-              Specify target aerodynamic coefficients and flight condition.
-              The generator returns a physically feasible 10-parameter geometry.
-            </p>
-          </header>
 
-          {/* ── Form ── */}
-          <form onSubmit={handleSubmit}>
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">Target Aerodynamic Condition</span>
-                <span className={`regime-badge ${regime.cls}`}>{regime.label} · Ma&nbsp;{fields.mach}</span>
-              </div>
-              <div className="form-grid">
-                <FormField id="cd"   label="Drag Coeff."     unit="Cd"  step="0.0001" value={fields.cd}   onChange={(v) => setField("cd",   v)} />
-                <FormField id="cl"   label="Lift Coeff."     unit="Cl"  step="0.0001" value={fields.cl}   onChange={(v) => setField("cl",   v)} />
-                <FormField id="cm"   label="Pitch Moment"    unit="Cm"  step="0.0001" value={fields.cm}   onChange={(v) => setField("cm",   v)} />
-                <FormField id="mach" label="Mach Number"     unit="Ma"  step="0.01"   value={fields.mach} onChange={(v) => setField("mach", v)} />
-                <FormField id="aoa"  label="Angle of Attack" unit="°"   step="0.1"    value={fields.aoa}  onChange={(v) => setField("aoa",  v)} />
-              </div>
-              <div className="form-footer">
-                {result && (
-                  <button type="button" className="btn-ghost" onClick={handleReset}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                      <path d="M3 3v5h5" />
-                    </svg>
-                    Reset
-                  </button>
-                )}
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading
-                    ? <span className="spinner" role="status" aria-label="Generating" />
-                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                      </svg>
-                  }
-                  {loading ? "Generating…" : "Generate Design"}
-                </button>
-              </div>
+            <div className="field-grid">
+              {FIELD_CONFIGS.map((config) => (
+                <FormField
+                  key={config.key}
+                  config={config}
+                  value={fields[config.key]}
+                  onChange={(value) => setField(config.key, value)}
+                />
+              ))}
             </div>
+
+            <button className="primary-button" type="submit" disabled={loading}>
+              {loading && <span className="spinner" aria-hidden="true" />}
+              {loading ? "Generating..." : "Generate design"}
+            </button>
           </form>
 
-          {/* ── Error ── */}
-          {error && (
-            <div className="alert alert-error" role="alert">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "1px" }} aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="15" y1="9" x2="9" y2="15" />
-                <line x1="9" y1="9" x2="15" y2="15" />
-              </svg>
-              {error}
-            </div>
-          )}
-
-          {/* ── Results ── */}
-          {result && (
-            <div className="card result-card">
-              <div className="result-card-header">
-                <div className="result-title-row">
-                  <h2 className="result-title">Generated Geometry</h2>
-                  <span className="badge-feasible">
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="4" /></svg>
-                    Feasible
-                  </span>
-                </div>
-                {/* Input echo chips */}
-                <div className="inputs-row" aria-label="Input conditions">
-                  {Object.entries(result.inputs).map(([k, v], i, arr) => (
-                    <span key={k} className="input-chip">
-                      <span className="input-chip-label">{k}</span>
-                      <span className="input-chip-value">{(v as number).toFixed(4)}</span>
-                      {i < arr.length - 1 && <span className="chip-sep" aria-hidden="true" />}
-                    </span>
-                  ))}
-                </div>
+          <section className="preview-panel" aria-label="Generated missile profile">
+            <div className="panel-heading">
+              <div>
+                <p className="panel-kicker">Geometry profile</p>
+                <h2>{result ? "Generated design" : "Preview state"}</h2>
               </div>
+              <span className="result-pill">{result ? "Model output" : "Awaiting run"}</span>
+            </div>
 
-              {/* Params table */}
-              <table className="design-table" aria-label="Missile geometry parameters">
-                <thead>
-                  <tr>
-                    <th>Parameter</th>
-                    <th>Description</th>
-                    <th>Value</th>
-                    <th style={{ width: "130px" }}>Range</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(result.design).map(([key, value]) => {
-                    const meta = PARAM_META[key];
-                    const pct  = meta
-                      ? Math.max(0, Math.min(100, ((value - meta.min) / (meta.max - meta.min)) * 100))
-                      : 50;
-                    const barColor =
-                      pct > 80 ? "var(--color-warn)"
-                      : pct < 20 ? "var(--color-blue)"
-                      : "var(--color-primary)";
-                    return (
-                      <tr key={key}>
-                        <td><code className="param-name">{key}</code></td>
-                        <td className="param-desc">{meta?.description ?? "—"}</td>
-                        <td>
-                          <span className="param-value">{value.toFixed(4)}</span>
-                          {meta && <span className="param-unit">{meta.unit}</span>}
-                        </td>
-                        <td>
-                          <div
-                            className="param-bar-wrap"
-                            role="meter"
-                            aria-valuenow={Math.round(pct)}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-label={`${Math.round(pct)}% of range`}
-                          >
-                            <div className="param-bar-track">
-                              <div
-                                className="param-bar-fill"
-                                style={{ width: `${pct}%`, background: barColor }}
-                              />
+            <DesignPreview design={result?.design ?? PREVIEW_DESIGN} hasResult={Boolean(result)} />
+
+            <div className="metric-grid" aria-label="Derived metrics">
+              {metrics.map((metric) => (
+                <div className="metric" key={metric.label}>
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                  <small>{metric.detail}</small>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {error && (
+          <div className="alert" role="alert">
+            <strong>Design request failed</strong>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <section className="results-panel" aria-label="Generated geometry parameters">
+          <div className="panel-heading">
+            <div>
+              <p className="panel-kicker">Numerical output</p>
+              <h2>Parameters</h2>
+            </div>
+            <button type="button" className="secondary-button" disabled={!result} onClick={handleCopy}>
+              {copied ? "Copied" : "Copy JSON"}
+            </button>
+          </div>
+
+          {result ? (
+            <>
+              <InputSummary inputs={result.inputs} />
+              <div className="table-scroll">
+                <table className="design-table">
+                  <thead>
+                    <tr>
+                      <th>Parameter</th>
+                      <th>Value</th>
+                      <th>Range</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {DESIGN_KEYS.map((key) => {
+                      const value = result.design[key];
+                      const meta = PARAM_META[key];
+                      const pct = rangePercent(value, meta.min, meta.max);
+
+                      return (
+                        <tr key={key}>
+                          <td>
+                            <span className="param-label">{meta.label}</span>
+                            <code>{key}</code>
+                          </td>
+                          <td>
+                            <span className="value-cell">
+                              {formatNumber(value)}
+                              <small>{meta.unit}</small>
+                            </span>
+                          </td>
+                          <td>
+                            <div className="range-cell">
+                              <div className="range-track" aria-hidden="true">
+                                <span style={{ width: `${pct}%` }} />
+                              </div>
+                              <small>{Math.round(pct)}%</small>
                             </div>
-                            <span className="param-bar-pct">{Math.round(pct)}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                          <td>{meta.description}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="empty-result">
+              <span>No generated result yet</span>
+              <p>Run the target condition to populate geometry values, range positions, and derived dimensions.</p>
             </div>
           )}
-
-          <footer className="footer">
-            <a href="https://github.com/Flacko-07/generative-missile-design" target="_blank" rel="noopener noreferrer">
-              generative-missile-design
-            </a>
-            {" — Conditional GAN Inverse Design"}
-          </footer>
-        </div>
-      </main>
-    </>
+        </section>
+      </section>
+    </main>
   );
 }
 
 function FormField({
-  id, label, unit, step, value, onChange,
+  config,
+  value,
+  onChange,
 }: {
-  id: string;
-  label: string;
-  unit: string;
-  step: string;
+  config: FieldConfig;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
 }) {
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <div className="input-wrap">
-        <input
-          id={id}
-          type="number"
-          step={step}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required
-          inputMode="decimal"
-        />
-        <span className="input-unit" aria-hidden="true">{unit}</span>
-      </div>
+    <label className="field" htmlFor={config.key}>
+      <span>
+        {config.label}
+        <small>{config.symbol}</small>
+      </span>
+      <input
+        id={config.key}
+        type="number"
+        value={value}
+        min={config.min}
+        max={config.max}
+        step={config.step}
+        onChange={(event) => onChange(event.target.value)}
+        required
+        inputMode="decimal"
+      />
+    </label>
+  );
+}
+
+function InputSummary({ inputs }: { inputs: Record<InputKey, number> }) {
+  return (
+    <div className="input-summary">
+      {(Object.entries(inputs) as [InputKey, number][]).map(([key, value]) => (
+        <span key={key}>
+          <small>{key}</small>
+          {formatNumber(value)}
+        </span>
+      ))}
     </div>
   );
+}
+
+function DesignPreview({
+  design,
+  hasResult,
+}: {
+  design: Record<ParamKey, number>;
+  hasResult: boolean;
+}) {
+  const totalLength = design.nose_length + design.body_length + design.flare_length;
+  const noseWidth = scaled(design.nose_length, totalLength, 520, 70);
+  const bodyWidth = scaled(design.body_length, totalLength, 520, 180);
+  const flareWidth = scaled(design.flare_length, totalLength, 520, 34);
+  const bodyHeight = clamp(design.body_diameter * 180, 42, 82);
+  const finHeight = clamp(design.fin_span * 80, 20, 70);
+  const finWidth = clamp(design.fin_chord * 180, 28, 90);
+  const centerY = 122;
+  const startX = 80;
+  const noseEnd = startX + noseWidth;
+  const bodyEnd = noseEnd + bodyWidth;
+  const flareEnd = bodyEnd + flareWidth;
+  const top = centerY - bodyHeight / 2;
+  const bottom = centerY + bodyHeight / 2;
+  const finBase = Math.max(noseEnd + bodyWidth * 0.58, bodyEnd - finWidth - 28);
+
+  return (
+    <div className={`schematic ${hasResult ? "is-live" : ""}`}>
+      <svg viewBox="0 0 720 250" role="img" aria-label="Side profile of generated missile geometry">
+        <defs>
+          <linearGradient id="bodyGradient" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="#dce6ee" />
+            <stop offset="55%" stopColor="#94a3b8" />
+            <stop offset="100%" stopColor="#56657a" />
+          </linearGradient>
+          <linearGradient id="finGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#f2b84b" />
+            <stop offset="100%" stopColor="#b56c21" />
+          </linearGradient>
+        </defs>
+
+        <line className="axis-line" x1="52" x2="668" y1={centerY} y2={centerY} />
+        <polygon
+          className="nose"
+          points={`${startX},${centerY} ${noseEnd},${top} ${noseEnd},${bottom}`}
+        />
+        <rect x={noseEnd} y={top} width={bodyWidth} height={bodyHeight} rx="6" />
+        <polygon
+          className="flare"
+          points={`${bodyEnd},${top} ${flareEnd},${top + bodyHeight * 0.16} ${flareEnd},${
+            bottom - bodyHeight * 0.16
+          } ${bodyEnd},${bottom}`}
+        />
+        <polygon
+          className="fin fin-top"
+          points={`${finBase},${top + 3} ${finBase + finWidth},${top + 3} ${
+            finBase + finWidth * 0.45
+          },${top - finHeight}`}
+        />
+        <polygon
+          className="fin fin-bottom"
+          points={`${finBase},${bottom - 3} ${finBase + finWidth},${bottom - 3} ${
+            finBase + finWidth * 0.45
+          },${bottom + finHeight}`}
+        />
+        <circle className="nose-tip" cx={startX} cy={centerY} r="4" />
+        <text x={startX} y="214">nose</text>
+        <text x={noseEnd + bodyWidth / 2 - 18} y="214">body</text>
+        <text x={Math.min(flareEnd - 42, 620)} y="214">flare</text>
+      </svg>
+    </div>
+  );
+}
+
+function buildMetrics(design: Record<ParamKey, number> | null): Metric[] {
+  if (!design) {
+    return [
+      { label: "Total length", value: "--", detail: "Available after generation" },
+      { label: "L/D ratio", value: "--", detail: "Length over diameter" },
+      { label: "Fin area", value: "--", detail: "Planform estimate" },
+      { label: "Aft flare", value: "--", detail: "Angle and section length" },
+    ];
+  }
+
+  const totalLength = design.nose_length + design.body_length + design.flare_length;
+  const lengthDiameter = totalLength / Math.max(design.body_diameter, 0.001);
+  const finArea = design.fin_span * design.fin_chord;
+
+  return [
+    { label: "Total length", value: `${formatNumber(totalLength)} m`, detail: "Nose + body + flare" },
+    { label: "L/D ratio", value: formatNumber(lengthDiameter), detail: "Length over diameter" },
+    { label: "Fin area", value: `${formatNumber(finArea)} m2`, detail: "Span times chord" },
+    {
+      label: "Aft flare",
+      value: `${formatNumber(design.flare_angle_deg)} deg`,
+      detail: `${formatNumber(design.flare_length)} m section`,
+    },
+  ];
+}
+
+function statusLabel(state: string) {
+  if (state === "running") return "Generating";
+  if (state === "complete") return "Result ready";
+  if (state === "error") return "Request error";
+  return "Ready";
+}
+
+function formatNumber(value: number) {
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: Math.abs(value) >= 10 ? 2 : 4,
+    maximumFractionDigits: Math.abs(value) >= 10 ? 2 : 4,
+  });
+}
+
+function rangePercent(value: number, min: number, max: number) {
+  return clamp(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function scaled(value: number, total: number, width: number, minimum: number) {
+  return Math.max(minimum, (value / Math.max(total, 0.001)) * width);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }

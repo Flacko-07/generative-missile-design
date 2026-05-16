@@ -4,8 +4,14 @@ __pycache__/
 *.egg-info/
 dist/
 
+# Node / Next.js
+node_modules/
+.next/
+out/
+
 # Trained models (large / binary)
 *.pth
+!gen.pth
 
 # OpenFOAM cases and generated meshes / results
 cases/
@@ -20,7 +26,6 @@ next_designs.json
 next_params.csv
 validation_results.csv
 generative_dataset.csv
-combined_dataset.csv
 synthetic_dataset.csv
 
 # Keep only the clean dataset as example
@@ -50,3 +55,5 @@ problemFaces
 # OS
 .DS_Store
 Thumbs.db
+*.stl
+*.obj
