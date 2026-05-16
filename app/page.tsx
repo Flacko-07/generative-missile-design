@@ -118,10 +118,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"table" | "json">("table");
 
-  const metrics = useMemo(
-    () => buildMetrics(result?.design ?? PREVIEW_DESIGN, Boolean(result)),
-    [result]
-  );
+  const metrics = useMemo(() => buildMetrics(result?.design ?? PREVIEW_DESIGN, Boolean(result)), [result]);
   const runState = loading ? "running" : error ? "error" : result ? "complete" : "ready";
 
   function setField(key: FieldKey, value: string) {
@@ -337,6 +334,48 @@ export default function Home() {
               </button>
             </div>
           </div>
+
+          {!loading && result && (
+            <div className="result-summary">
+              <div className="result-summary-main">
+                <span className="result-pill is-live">CGAN result</span>
+                <h3>Design snapshot</h3>
+                <p>
+                  L/D {formatNumber(
+                    (result.design.nose_length +
+                      result.design.body_length +
+                      result.design.flare_length) /
+                    Math.max(result.design.body_diameter, 0.001)
+                  )},{" "}
+                  total length{" "}
+                  {formatNumber(
+                    result.design.nose_length +
+                    result.design.body_length +
+                    result.design.flare_length
+                  )}{" "}
+                  m.
+                </p>
+              </div>
+              <div className="result-summary-chips">
+                <span className="summary-chip">
+                  <small>Mach</small>
+                  <strong>{formatNumber(result.inputs.Mach)}</strong>
+                </span>
+                <span className="summary-chip">
+                  <small>AoA</small>
+                  <strong>{formatNumber(result.inputs.AoA)}</strong>
+                </span>
+                <span className="summary-chip">
+                  <small>Cd</small>
+                  <strong>{formatNumber(result.inputs.Cd)}</strong>
+                </span>
+                <span className="summary-chip">
+                  <small>Cl</small>
+                  <strong>{formatNumber(result.inputs.Cl)}</strong>
+                </span>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <SkeletonTable />
