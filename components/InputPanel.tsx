@@ -1,7 +1,19 @@
 import { Slider } from './ui/Slider';
 
-export default function InputPanel({ params, setParams }) {
-  const updateParam = (key, value) => setParams({ ...params, [key]: value });
+interface InputPanelProps {
+  params: {
+    noseLength: number;
+    bodyDiameter: number;
+    finSpan: number;
+    mach: number;
+    altitude: number;
+    // add any other params you have
+  };
+  setParams: (params: any) => void;
+}
+
+export default function InputPanel({ params, setParams }: InputPanelProps) {
+  const updateParam = (key: string, value: number) => setParams({ ...params, [key]: value });
 
   return (
     <div className="space-y-6">
@@ -70,7 +82,17 @@ export default function InputPanel({ params, setParams }) {
 }
 
 // Reusable parameter field with slider + number input
-function ParamField({ label, unit, value, onChange, min, max, step = 1 }) {
+interface ParamFieldProps {
+  label: string;
+  unit: string;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+}
+
+function ParamField({ label, unit, value, onChange, min, max, step = 1 }: ParamFieldProps) {
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
