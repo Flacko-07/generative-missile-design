@@ -12,7 +12,7 @@ export default function ResultsCard({ results, params }: ResultsCardProps) {
   const [copied, setCopied] = useState(false);
 
   const exportData = {
-    geometry: params,
+    geometry: params.apiDesign ?? params,
     aerodynamics: {
       ldRatio: results.ldRatio,
       dragCoefficient: results.cd,
