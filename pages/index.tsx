@@ -8,6 +8,13 @@ import ResultsCard from '@/components/ResultsCard';
 import GenerateButton from '@/components/GenerateButton';
 import { computeMissileResults } from '@/lib/computeMissileResults';
 
+interface ResultsType {
+  ldRatio: number;
+  totalLength: number;
+  finArea: number;
+  cd: number;
+}
+
 export default function Home() {
   const [params, setParams] = useState({
     noseLength: 450,
@@ -15,9 +22,8 @@ export default function Home() {
     finSpan: 280,
     mach: 2.5,
     altitude: 8,
-    // Add other parameters as needed
   });
-  const [results, setResults] = useState(null);
+  const [results, setResults] = useState<ResultsType | null>(null);
 
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-20 space-y-20">
