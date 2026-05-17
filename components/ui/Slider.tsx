@@ -1,4 +1,13 @@
-export function Slider({ value, onValueChange, min, max, step, className }) {
+interface SliderProps {
+  value: number;
+  onValueChange: (value: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  className?: string;
+}
+
+export function Slider({ value, onValueChange, min, max, step, className }: SliderProps) {
   const percentage = ((value - min) / (max - min)) * 100;
 
   return (
