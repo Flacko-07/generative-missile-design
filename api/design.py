@@ -138,6 +138,10 @@ class handler(BaseHTTPRequestHandler):
             self._json(200, {'inputs': {'Cd':cd,'Cl':cl,'Cm':cm,'Mach':mach,'AoA':aoa}, 'design': generate(cd,cl,cm,mach,aoa)})
         except Exception as e:
             self._json(400, {'error': str(e)})
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(result).encode())
 
     def do_POST(self):
         try:
