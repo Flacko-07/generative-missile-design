@@ -1,6 +1,14 @@
 import { useState } from 'react';
 
-export default function ResultsCard({ results, params }) {
+interface ResultsCardProps {
+  results: {
+    ldRatio: number;
+    cd: number;
+  };
+  params: any;
+}
+
+export default function ResultsCard({ results, params }: ResultsCardProps) {
   const [copied, setCopied] = useState(false);
 
   const exportData = {
