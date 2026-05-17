@@ -2,5 +2,10 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/design", "destination": "/api/design.py" }
-  ]
+  ],
+  "functions": {
+    "api/design.py": {
+      "excludeFiles": "{brahmos.stl,hypersonic.stl,tomahawk.stl,gan_dataset/**,active_learning.py,export.py,export_weights.py,generate_final_design.py,geometry.py,merge_syn_clean.py,parametric_sweep.py,synthetic_dataset.py}"
+    }
+  }
 }
