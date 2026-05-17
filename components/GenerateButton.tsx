@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function GenerateButton({ onClick }) {
+export default function GenerateButton({ onClick }: { onClick: () => void }){
   const [isPressing, setIsPressing] = useState(false);
 
   return (
