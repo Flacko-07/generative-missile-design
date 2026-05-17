@@ -4,7 +4,6 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # ---------- Numpy-only Generator inference ----------
-# Weights are loaded from gen_weights.npz (exported from gen.pth via export_weights.py)
 import os
 
 WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "..", "gen_weights.npz")
@@ -135,13 +134,9 @@ class handler(BaseHTTPRequestHandler):
         try:
             params = parse_qs(urlparse(self.path).query)
             cd, cl, cm, mach, aoa = self._parse_params(params)
-            self._json(200, {'inputs': {'Cd':cd,'Cl':cl,'Cm':cm,'Mach':mach,'AoA':aoa}, 'design': generate(cd,cl,cm,mach,aoa)})
+            self._json(200, {'inputs': {'Cd': cd, 'Cl': cl, 'Cm': cm, 'Mach': mach, 'AoA': aoa}, 'design': generate(cd, cl, cm, mach, aoa)})
         except Exception as e:
             self._json(400, {'error': str(e)})
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(result).encode())
 
     def do_POST(self):
         try:
@@ -149,6 +144,6 @@ class handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(length).decode() if length else '{}')
             params = {k: [str(v)] for k, v in data.items()}
             cd, cl, cm, mach, aoa = self._parse_params(params)
-            self._json(200, {'inputs': {'Cd':cd,'Cl':cl,'Cm':cm,'Mach':mach,'AoA':aoa}, 'design': generate(cd,cl,cm,mach,aoa)})
+            self._json(200, {'inputs': {'Cd': cd, 'Cl': cl, 'Cm': cm, 'Mach': mach, 'AoA': aoa}, 'design': generate(cd, cl, cm, mach, aoa)})
         except Exception as e:
             self._json(400, {'error': str(e)})
