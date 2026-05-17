@@ -1,7 +1,12 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/api/design", "destination": "/api/design.py" }
+  "builds": [
+    { "src": "api/design.py", "use": "@vercel/python" },
+    { "src": "package.json", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/api/design", "dest": "/api/design.py" },
+    { "src": "/(.*)", "dest": "/" }
   ],
   "functions": {
     "api/design.py": {
