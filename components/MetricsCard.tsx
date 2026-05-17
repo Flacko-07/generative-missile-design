@@ -1,4 +1,10 @@
-export default function MetricsCard({ ldRatio, totalLength, finArea }) {
+interface MetricsCardProps {
+  ldRatio: number;
+  totalLength: number;
+  finArea: number;
+}
+
+export default function MetricsCard({ ldRatio, totalLength, finArea }: MetricsCardProps) {
   return (
     <div className="glass-card p-5 grid grid-cols-3 divide-x divide-white/10">
       <div className="text-center">
