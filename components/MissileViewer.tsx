@@ -1,7 +1,15 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Cylinder, Cone } from '@react-three/drei';
 
-export default function MissileViewer({ params }) {
+interface MissileViewerProps {
+  params: {
+    noseLength: number;
+    bodyDiameter: number;
+    finSpan: number;
+  };
+}
+
+export default function MissileViewer({ params }: MissileViewerProps) {
   const { noseLength, bodyDiameter, finSpan } = params;
 
   const bodyRadius = bodyDiameter / 200;   // scale for preview (120mm → 0.6)
