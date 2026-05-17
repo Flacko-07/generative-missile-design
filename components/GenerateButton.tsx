@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, MouseEventHandler } from 'react';
 
-export default function GenerateButton({ onClick }: { onClick: () => void }){
+interface GenerateButtonProps {
+  onClick: MouseEventHandler<HTMLButtonElement>;
+}
+
+export default function GenerateButton({ onClick }: GenerateButtonProps) {
   const [isPressing, setIsPressing] = useState(false);
 
   return (
