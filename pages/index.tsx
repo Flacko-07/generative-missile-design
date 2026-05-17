@@ -6,7 +6,11 @@ import MissileViewer from '@/components/MissileViewer';
 import MetricsCard from '@/components/MetricsCard';
 import ResultsCard from '@/components/ResultsCard';
 import GenerateButton from '@/components/GenerateButton';
-import { computeMissileResults } from '@/lib/computeMissileResults';
+import {
+  computeMissileResults,
+  callDesignApi,
+  DesignApiGeometry,
+} from '@/lib/computeMissileResults';
 
 interface ResultsType {
   ldRatio: number;
@@ -15,8 +19,16 @@ interface ResultsType {
   cd: number;
 }
 
+interface UiParams {
+  noseLength: number;
+  bodyDiameter: number;
+  finSpan: number;
+  mach: number;
+  altitude: number;
+}
+
 export default function Home() {
-  const [params, setParams] = useState({
+  const [params, setParams] = useState<UiParams>({
     noseLength: 450,
     bodyDiameter: 120,
     finSpan: 280,
@@ -24,6 +36,46 @@ export default function Home() {
     altitude: 8,
   });
   const [results, setResults] = useState<ResultsType | null>(null);
+  const [design, setDesign] = useState<DesignApiGeometry | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      // Map UI controls → aerodynamic targets.
+      // For now we keep a simple mapping: use the heuristic cd from
+      // computeMissileResults, assume Cl~0 and Cm~0, and derive AoA
+      // from Mach + altitude for a reasonable default.
+      const derived = computeMissileResults(params);
+      const aoa = 5; // degrees – could be another control later
+
+      const apiRes = await callDesignApi({
+        cd: derived.cd,
+        cl: 0,
+        cm: 0,
+        mach: params.mach,
+        aoa,
+      });
+
+      setDesign(apiRes.design);
+      setResults(derived);
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to generate design');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const viewerParams = design
+    ? {
+        noseLength: design.nose_length * 1000, // convert m → mm for viewer scale
+        bodyDiameter: design.body_diameter * 1000,
+        finSpan: design.fin_span * 1000,
+      }
+    : params;
 
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-20 space-y-20">
@@ -67,12 +119,10 @@ export default function Home() {
           className="glass-card p-6 md:p-8 space-y-8"
         >
           <InputPanel params={params} setParams={setParams} />
-          <GenerateButton
-            onClick={() => {
-              const computed = computeMissileResults(params);
-              setResults(computed);
-            }}
-          />
+          {error && (
+            <p className="text-sm text-red-400 font-mono">{error}</p>
+          )}
+          <GenerateButton onClick={handleGenerate} isLoading={isLoading} />
         </motion.div>
 
         {/* Right: 3D + Metrics + Output */}
@@ -83,16 +133,22 @@ export default function Home() {
           className="space-y-6"
         >
           <div className="glass-card p-4 h-[320px] md:h-[400px] overflow-hidden">
-            <MissileViewer params={params} />
+            <MissileViewer params={viewerParams} />
           </div>
-          {results && (
+          {results && design && (
             <>
               <MetricsCard
                 ldRatio={results.ldRatio}
                 totalLength={results.totalLength}
                 finArea={results.finArea}
               />
-              <ResultsCard results={results} params={params} />
+              <ResultsCard
+                results={{ ldRatio: results.ldRatio, cd: results.cd }}
+                params={{
+                  ...params,
+                  apiDesign: design,
+                }}
+              />
             </>
           )}
         </motion.div>
